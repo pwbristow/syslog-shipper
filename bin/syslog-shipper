@@ -73,7 +73,6 @@ def main(args)
                                           interval = globcheck_interval,
                                           exclude = exclude_patterns,
                                           start_pos = -1,
-                                          connection = connection,
                                           raw = raw,
                                           verbose = verbose
                                           )

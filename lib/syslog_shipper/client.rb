@@ -29,26 +29,49 @@
 require "socket"
 
 class Client < EventMachine::FileTail
-  def initialize(path, startpos=-1, connection=nil, raw=false, verbose=false)
+  def initialize(path, startpos=-1, raw=false, verbose=false)
     super(path, startpos)
     @buffer = BufferedTokenizer.new
     @hostname = Socket.gethostname
-    @connection = connection
     @raw = raw
     @verbose = verbose
+
+    setup_intermediary
   end
 
   def receive_data(data)
     @buffer.extract(data).each do |line|
-      if @raw
-        @connection.send_data("#{line}\n")
-        puts line if @verbose
+      line = if @raw
+        "#{line}\n"
       else
         timestamp = Time.now.strftime("%b %d %H:%M:%S")
-        syslogline = "#{timestamp} #{@hostname} #{path}: #{line}\n"
-        print syslogline if @verbose
-        @connection.send_data(syslogline)
+        "#{timestamp} #{@hostname} #{path}: #{line}\n"
       end
-    end # buffer extract
-  end # def receive_data
-end # class Shipper
+
+      print line if @verbose
+      send_data(line)
+    end 
+  end
+
+  private
+
+  def send_data line
+    @pseudo_client.send line, 0
+  end
+
+  def setup_intermediary
+    puts "setting up"
+    @pseudo_client, @pseudo_server = Socket.pair(:UNIX, :DGRAM, 0)
+    Process.fork do 
+      i = 0
+      Socket.udp_server_loop_on([@pseudo_server]) do |msg, msg_src|
+        puts msg
+        puts msg_src
+        puts "done #{i}"
+        i += 1
+      end
+    end
+
+    puts "done setting up"
+  end
+end
