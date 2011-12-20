@@ -1,32 +1,5 @@
-#!/usr/bin/env ruby
-
-# http://andyjeffries.co.uk/articles/x509-encrypted-authenticated-socket-ruby-client
-# require 'socket'
-# require 'openssl'
-# 
-# socket = TCPSocket.new('my.secure.service', 443)
-# socket.puts("GET / HTTP/1.0")
-# socket.puts("")
-# 
-# while line = socket.gets
-#   p line
-# end
-
-# 
-# socket = TCPSocket.new('my.secure.service', 443)
-# ssl_context = OpenSSL::SSL::SSLContext.new()
-# ssl_socket = OpenSSL::SSL::SSLSocket.new(socket, ssl_context)
-# ssl_socket.sync_close = true
-# ssl_socket.connect
-# 
-# ssl_socket.puts("GET / HTTP/1.0")
-# ssl_socket.puts("")
-# 
-# while line = ssl_socket.gets
-#   p line
-# end
-
 require "socket"
+require 'openssl'
 
 class Client < EventMachine::FileTail
   def initialize(path, startpos=-1, raw=false, verbose=false)
@@ -60,18 +33,22 @@ class Client < EventMachine::FileTail
   end
 
   def setup_intermediary
-    puts "setting up"
     @pseudo_client, @pseudo_server = Socket.pair(:UNIX, :DGRAM, 0)
     Process.fork do 
+      socket = TCPSocket.new('logs.loggly.com', 32018)
+      ssl_context = OpenSSL::SSL::SSLContext.new()
+      # ssl_context.post_connection_check('logs.loggly.com')
+
+      ssl_socket = OpenSSL::SSL::SSLSocket.new(socket, ssl_context)
+      ssl_socket.sync_close = true
+      ssl_socket.connect
+
       i = 0
       Socket.udp_server_loop_on([@pseudo_server]) do |msg, msg_src|
-        puts msg
-        puts msg_src
-        puts "done #{i}"
+        ssl_socket.puts msg
         i += 1
+        puts i
       end
     end
-
-    puts "done setting up"
   end
 end
