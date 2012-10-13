@@ -6,7 +6,8 @@ module SyslogShipper
       super path, options[:startpos]
       @buffer = BufferedTokenizer.new
       @hostname = Socket.gethostname
-      @connection = options[:connection]
+      @connector = options[:connector]
+      @connection = @connector.call()
       @raw = options[:raw]
       @ping = options[:ping]
       @verbose = options[:verbose]
@@ -29,6 +30,9 @@ module SyslogShipper
     private
 
     def send_data line
+      if(@connection.error?)
+	@connection = @connector.call()
+      end
       @connection.send_data line        
     end
 
