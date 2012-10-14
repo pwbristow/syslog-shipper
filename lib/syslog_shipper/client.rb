@@ -11,6 +11,12 @@ module SyslogShipper
       @raw = options[:raw]
       @ping = options[:ping]
       @verbose = options[:verbose]
+  
+      if options[:mark] > 0
+          EM.add_periodic_timer( options[:mark] ) do
+            send_data("ping pong\n")
+          end
+      end
     end
 
     def receive_data(data)

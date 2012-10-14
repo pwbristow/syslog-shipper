@@ -16,6 +16,9 @@ def main(args)
       For example: #{$0} -s somehost:514 +/var/log/messages /var/log/apache2/access.syslog
     EOS
 
+    opt :mark, "Mark the log file every x seconds", :default => 0
+    opt :pid_file, "Where to write the pid to", :type => :string, :short => :p
+
     opt :check_interval, "How frequently, in seconds, to check the glob patterns" \
             "for new files", :default => 5, :short => :i
     opt :exclude, "A pattern to ignore. Wildcard/globs accepted." \
@@ -44,6 +47,10 @@ def main(args)
 
   Trollop.die "You must supply files to watch" if files.empty?
   Trollop.die "You must supply the host:port to connect to" if options.server.nil?
+
+  if options[:pid_file]
+    File.open(options[:pid_file], 'w') { |f| f.write(Process.pid) }
+  end
 
   host, port = options[:server].split(":")
   port = 514 if port == nil
@@ -80,6 +87,7 @@ def main(args)
                                           {:startpos => -1,
                                           :raw => raw,
 					  :connector => connector,
+                                          :mark => options[:mark],
                                           :ping => options[:ping],
                                           :verbose => options[:verbose]})
     end # args.each
